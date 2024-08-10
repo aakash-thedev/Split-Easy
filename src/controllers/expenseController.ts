@@ -1,8 +1,10 @@
 import { Request, Response } from "express";
 import { Expense } from "../models/Expense";
 import { Group } from "../models/Group";
-import { geminiTextPrompt } from "../utils/gemini/gemini-engine";
+import { geminiProVision, geminiTextPrompt } from "../utils/gemini/gemini-engine";
 import { IUser } from "../models/User";
+import { isInvalidReceipt, parseAnalysisResult } from "../utils/helpers/expenseHelper";
+import fs from 'fs';
 
 // @route     POST /api/expenses/create
 // @desc      Create a new expense
@@ -63,3 +65,35 @@ export const settleExpenses = async (req: Request, res: Response) => {
   }
 }
 
+
+export const analysisReceipt = async (req: Request, res: Response) => {
+  try {
+    const { file } = req;
+    if (!file) {
+      return res.status(400).json({ message: 'No file uploaded' });
+    }
+
+    const prompt = "Analyze this receipt or bill and extract the description, total amount, and type of expense.";
+    const imagePath = file.path;
+
+    const analysisResult = await geminiProVision(prompt, imagePath);
+
+    if (isInvalidReceipt(analysisResult)) {
+      fs.unlinkSync(imagePath);
+      return res.status(400).json({ message: 'It\'s not a valid bill or receipt' });
+    }
+
+    const [description, totalAmount, expenseType] = parseAnalysisResult(analysisResult);
+
+    // Clean up the uploaded file
+    fs.unlinkSync(imagePath);
+
+    res.status(200).json({
+      description,
+      total_amount: totalAmount,
+      expense_type: expenseType
+    });
+  } catch (error) {
+    res.status(500).json({ message: error });
+  }
+}

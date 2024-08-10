@@ -1,5 +1,6 @@
 import { Router } from "express";
-import { allExpenses, createExpense, settleExpenses } from "../controllers/expenseController";
+import multer from 'multer';
+import { allExpenses, analysisReceipt, createExpense, settleExpenses } from "../controllers/expenseController";
 
 const router = Router();
 
@@ -17,5 +18,10 @@ router.get('/:groupId/allExpenses', allExpenses);
 // @desc      Settle up all the expenses
 // @access    PRIVATE
 router.get('/:groupId/settleExpenses', settleExpenses);
+
+// @route     POST /api/expenses/:groupId/analyzeReceipt
+// @desc      Analyze the receipt / bills
+// @access    PRIVATE
+router.get('/:groupId/analyzeReceipt', analysisReceipt);
 
 export default router;
