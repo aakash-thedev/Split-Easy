@@ -1,6 +1,8 @@
 import { Request, Response } from "express";
 import { Expense } from "../models/Expense";
 import { Group } from "../models/Group";
+import { geminiTextPrompt } from "../utils/gemini/gemini-engine";
+import { IUser } from "../models/User";
 
 // @route     POST /api/expenses/create
 // @desc      Create a new expense
@@ -34,13 +36,6 @@ export const allExpenses = async (req: Request, res: Response) => {
 // @desc      Settle up all the expenses
 // @access    PRIVATE
 export const settleExpenses = async (req: Request, res: Response) => {
-
-  interface IUserBalance {
-    userId: string;
-    amountOwed: number;
-    amountOwes: number;
-  }
-
   try {
     const { groupId } = req.params;
     const group = await Group.findById(groupId);
@@ -49,17 +44,22 @@ export const settleExpenses = async (req: Request, res: Response) => {
       return res.status(404).json({ message: 'Group not found' });
     }
 
-    const allExpenses = await Expense.find({ group: groupId }).populate('paidBy', 'id, name').populate('splitBetween', 'id, name');
+    const allExpenses = await Expense.find({ group: groupId })
+      .populate<{ paidBy: IUser }>('paidBy', 'id name')
+      .populate<{ splitBetween: IUser[] }>('splitBetween', 'id name');
 
-    // Initialise balances
+    const expenseSummary = allExpenses.map(expense => {
+      return `${expense.paidBy.name} paid ${expense.amount} for ${expense.description}, shared among ${expense.splitBetween.map(user => user.name).join(', ')}`;
+    }).join('. ');
 
-    const balances: Record<string, IUserBalance> = {};
+    const prompt = `Here are the group expenses: ${expenseSummary}. Suggest the optimal way to settle these expenses.`;
 
-    allExpenses.forEach((expense) => {
-      const splitAmount = expense.amount / expense.splitBetween.length;
+    const settlementSuggestion = await geminiTextPrompt(prompt);
 
-    })
+    res.status(200).json({ settlementSuggestion });
+
   } catch (error) {
     res.status(500).json({ message: error });
   }
 }
+
