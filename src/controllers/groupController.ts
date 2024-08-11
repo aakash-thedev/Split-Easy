@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { Group } from "../models/Group";
 import User from "../models/User";
 import { AuthRequest } from "../middlewares/auth";
+import { Expense } from "../models/Expense";
 
 // @route     POST /api/groups/create
 // @desc      Create a new group
@@ -38,10 +39,17 @@ export const fetchUserGroups = async (req: AuthRequest, res: Response) => {
 export const groupDetails = async (req: Request, res: Response) => {
   try {
     const group = await Group.findById(req.params.id).populate('members', 'name email');
+
     if (!group) {
       return res.status(404).json({ message: 'Group not found' });
     }
-    res.json(group);
+
+    const expenses = await Expense.find({ group: group.id })
+      .populate('paidBy', 'id, name')
+      .populate('splitBetween', 'id, name')
+      .sort({ createdAt: -1 })
+
+    res.status(200).json({ group: group, expenses: expenses });
   } catch (error) {
     res.status(500).json({ message: error });
   }
