@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { Group } from "../models/Group";
-import { User } from "../models/User";
+import User from "../models/User";
+import { AuthRequest } from "../middlewares/auth";
 
 // @route     POST /api/groups/create
 // @desc      Create a new group
@@ -12,6 +13,20 @@ export const createGroup = async (req: Request, res: Response) => {
     await group.save();
 
     res.status(201).json(group);
+  } catch (error) {
+    res.status(500).json({ message: error });
+  }
+}
+
+// @route     GET /api/groups/fetchUserGroups
+// @desc      Fetch User Groups
+// @access    PRIVATE
+export const fetchUserGroups = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user.id;
+    const groups = await Group.find({ members: userId }).populate('members', 'id, name');
+
+    res.status(200).json(groups);
   } catch (error) {
     res.status(500).json({ message: error });
   }

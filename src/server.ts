@@ -1,5 +1,6 @@
 import express from 'express';
 import dotenv from 'dotenv';
+import cors from 'cors';
 import connectDB from './config/db';
 import bodyParser from 'body-parser';
 import userRoutes from './routes/userRoutes';
@@ -12,6 +13,12 @@ dotenv.config({ path: envFile });
 
 const PORT = process.env.PORT || 8080;
 const app = express();
+
+app.use(cors({
+  origin: 'http://localhost:3000',
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 
 app.use(bodyParser.json());
 
