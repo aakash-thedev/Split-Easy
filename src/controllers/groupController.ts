@@ -8,8 +8,8 @@ import { AuthRequest } from "../middlewares/auth";
 // @access    PRIVATE
 export const createGroup = async (req: AuthRequest, res: Response) => {
   try {
-    const { groupName, groupDescription, memberIds } = req.body;
-    const group = new Group({ name: groupName, description: groupDescription, members: [...memberIds, req.user.id] });
+    const { groupName, groupDescription, memberIds, categories } = req.body;
+    const group = new Group({ name: groupName, description: groupDescription, members: [...memberIds, req.user.id], categories });
     await group.save();
 
     res.status(201).json({ group });
