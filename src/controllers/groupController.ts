@@ -6,13 +6,13 @@ import { AuthRequest } from "../middlewares/auth";
 // @route     POST /api/groups/create
 // @desc      Create a new group
 // @access    PRIVATE
-export const createGroup = async (req: Request, res: Response) => {
+export const createGroup = async (req: AuthRequest, res: Response) => {
   try {
-    const { name, memberIds } = req.body;
-    const group = new Group({ name, members: memberIds });
+    const { groupName, groupDescription, memberIds } = req.body;
+    const group = new Group({ name: groupName, description: groupDescription, members: [...memberIds, req.user.id] });
     await group.save();
 
-    res.status(201).json(group);
+    res.status(201).json({ group });
   } catch (error) {
     res.status(500).json({ message: error });
   }
@@ -24,9 +24,9 @@ export const createGroup = async (req: Request, res: Response) => {
 export const fetchUserGroups = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user.id;
-    const groups = await Group.find({ members: userId }).populate('members', 'id, name');
+    const groups = await Group.find({ members: userId }).populate('members', 'id, name').sort({ createdAt: -1 });
 
-    res.status(200).json(groups);
+    res.status(200).json({ groups });
   } catch (error) {
     res.status(500).json({ message: error });
   }

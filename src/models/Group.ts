@@ -12,6 +12,8 @@ const groupSchema = new Schema<IGroup>({
   description: { type: String },
   coverImageUrl: { type: String },
   members: [{ type: Schema.Types.ObjectId, ref: 'User' }]
+}, {
+  timestamps: true
 });
 
 export const Group = model<IGroup>('Group', groupSchema);

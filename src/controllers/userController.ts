@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import User from "../models/User";
 import { generateToken } from "../utils/jwt";
+import { AuthRequest } from "../middlewares/auth";
 
 // @route     POST /api/users/register
 // @desc      Register a user
@@ -57,10 +58,9 @@ export const login = async (req: Request, res: Response) => {
 // @route     GET /api/users/allUsers
 // @desc      Fetch users
 // @access    PRIVATE
-export const allUsers = async (req: Request, res: Response) => {
+export const allUsers = async (req: AuthRequest, res: Response) => {
   try {
-    const users = await User.find();
-    console.log("ALL USERS", users);
+    const users = await User.find({ _id: { $ne: req.user.id } }).select('id, name');
     res.status(200).json({ users: users, message: 'All Users' });
 
   } catch (error) {

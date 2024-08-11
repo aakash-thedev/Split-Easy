@@ -14,6 +14,8 @@ const expenseSchema = new Schema<IExpense>({
   paidBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   group: { type: Schema.Types.ObjectId, ref: 'Group', required: true },
   splitBetween: [{ type: Schema.Types.ObjectId, ref: 'User' }],
+}, {
+  timestamps: true
 });
 
 export const Expense = model<IExpense>('Expense', expenseSchema);

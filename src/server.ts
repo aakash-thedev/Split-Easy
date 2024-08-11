@@ -14,11 +14,7 @@ dotenv.config({ path: envFile });
 const PORT = process.env.PORT || 8080;
 const app = express();
 
-app.use(cors({
-  origin: 'http://localhost:3000',
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
+app.use(cors());
 
 app.use(bodyParser.json());
 
