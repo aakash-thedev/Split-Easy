@@ -2,7 +2,6 @@ import { Schema, model, Document } from 'mongoose';
 
 interface IExpense extends Document {
   name: string;
-  description: string;
   amount: number;
   paidBy: Schema.Types.ObjectId;
   group: Schema.Types.ObjectId;
@@ -13,7 +12,6 @@ interface IExpense extends Document {
 
 const expenseSchema = new Schema<IExpense>({
   name: { type: String, required: true },
-  description: { type: String, required: true },
   amount: { type: Number, required: true },
   paidBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   group: { type: Schema.Types.ObjectId, ref: 'Group', required: true },
