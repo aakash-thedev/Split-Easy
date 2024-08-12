@@ -3,4 +3,4 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 
 dotenv.config();
 
-export const genAi = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_API_KEY as string);
+export const genAi = new GoogleGenerativeAI("AIzaSyDZUa7FnxK-OUPoHjtQigbn2gHRpiE8aXw");

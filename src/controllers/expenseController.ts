@@ -5,21 +5,39 @@ import { geminiProVision, geminiTextPrompt } from "../utils/gemini/gemini-engine
 import { IUser } from "../models/User";
 import { isInvalidReceipt, parseAnalysisResult } from "../utils/helpers/expenseHelper";
 import fs from 'fs';
+import { AuthRequest } from "../middlewares/auth";
+import { GroupSettlementResult } from "../models/GroupSettlementResult";
 
 // @route     POST /api/expenses/create
 // @desc      Create a new expense
 // @access    PRIVATE
-export const createExpense = async (req: Request, res: Response) => {
+export const createExpense = async (req: AuthRequest, res: Response) => {
   try {
-    const { description, amount, paidBy, group, splitBetween } = req.body;
-    const expense = new Expense({ description, amount, paidBy, group, splitBetween });
+    const { name, description, amount, group, isEqualSplit, customAmounts } = req.body;
+    const paidBy = req.user.id;
+    const splitBetween = req.body.splitBetween.map((user: any) => user._id);
+
+    // Create a new expense object based on whether the split is equal or unequal
+    const expenseData = {
+      name,
+      description,
+      amount,
+      paidBy,
+      group,
+      splitBetween,
+      isEqualSplit,
+      customAmounts: isEqualSplit ? {} : new Map(Object.entries(customAmounts)),
+    };
+
+    const expense = new Expense(expenseData);
     await expense.save();
 
-    res.status(201).json(expense);
+    res.status(201).json({ message: 'New expense created' });
   } catch (error) {
     res.status(500).json({ message: error });
   }
-}
+};
+
 
 // @route     GET /api/expenses/:groupId/allExpenses
 // @desc      Get all expenses
@@ -46,17 +64,36 @@ export const settleExpenses = async (req: Request, res: Response) => {
       return res.status(404).json({ message: 'Group not found' });
     }
 
+    const groupResult = await GroupSettlementResult.findOne({ group: groupId });
+
+    if (groupResult) {
+      return res.status(200).json({ settlementSuggestion: groupResult.result });
+    }
+
     const allExpenses = await Expense.find({ group: groupId })
       .populate<{ paidBy: IUser }>('paidBy', 'id name')
       .populate<{ splitBetween: IUser[] }>('splitBetween', 'id name');
 
     const expenseSummary = allExpenses.map(expense => {
-      return `${expense.paidBy.name} paid ${expense.amount} for ${expense.description}, shared among ${expense.splitBetween.map(user => user.name).join(', ')}`;
+      if (expense.isEqualSplit) {
+        return `${expense.paidBy.name} paid ${expense.amount} for ${expense.description}, shared equally among ${expense.splitBetween.map(user => user.name).join(', ')}`;
+      } else {
+        const customAmounts = expense.splitBetween.map(user => {
+          const amount = expense.customAmounts.get(user.id.toString());
+          return `${user.name} owes ${amount}`;
+        }).join(', ');
+        return `${expense.paidBy.name} paid ${expense.amount} for ${expense.description}, shared unequally: ${customAmounts}`;
+      }
     }).join('. ');
 
-    const prompt = `Here are the group expenses: ${expenseSummary}. Suggest the optimal way to settle these expenses.`;
+    const prompt = `Here are the group expenses: ${expenseSummary}. Suggest the optimal way to settle these expenses.
+    Only give the split explanation like who has give give whom how much ?
+    Also return the response as a html code so that i could just render it on frontend without worrying about styles,
+    ignore tags like html head etc just divs and make sure to use bold colors for user names and grey colors for amount owes and remaining text.
+    After that break a line and under a heading proper explanation with a classname full-explanation give the proper explanation for above result`;
 
     const settlementSuggestion = await geminiTextPrompt(prompt);
+    await GroupSettlementResult.create({ group: groupId, result: settlementSuggestion });
 
     res.status(200).json({ settlementSuggestion });
 
@@ -64,6 +101,7 @@ export const settleExpenses = async (req: Request, res: Response) => {
     res.status(500).json({ message: error });
   }
 }
+
 
 
 export const analysisReceipt = async (req: Request, res: Response) => {
