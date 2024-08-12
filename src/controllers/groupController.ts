@@ -1,17 +1,34 @@
 import { Request, Response } from "express";
 import { Group } from "../models/Group";
-import { User } from "../models/User";
+import User from "../models/User";
+import { AuthRequest } from "../middlewares/auth";
+import { Expense } from "../models/Expense";
+import { GroupSettlementResult } from "../models/GroupSettlementResult";
 
 // @route     POST /api/groups/create
 // @desc      Create a new group
 // @access    PRIVATE
-export const createGroup = async (req: Request, res: Response) => {
+export const createGroup = async (req: AuthRequest, res: Response) => {
   try {
-    const { name, memberIds } = req.body;
-    const group = new Group({ name, members: memberIds });
+    const { groupName, groupDescription, memberIds, categories } = req.body;
+    const group = new Group({ name: groupName, description: groupDescription, members: [...memberIds, req.user.id], categories });
     await group.save();
 
-    res.status(201).json(group);
+    res.status(201).json({ group });
+  } catch (error) {
+    res.status(500).json({ message: error });
+  }
+}
+
+// @route     GET /api/groups/fetchUserGroups
+// @desc      Fetch User Groups
+// @access    PRIVATE
+export const fetchUserGroups = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user.id;
+    const groups = await Group.find({ members: userId }).populate('members', 'id, name').sort({ createdAt: -1 });
+
+    res.status(200).json({ groups });
   } catch (error) {
     res.status(500).json({ message: error });
   }
@@ -23,10 +40,19 @@ export const createGroup = async (req: Request, res: Response) => {
 export const groupDetails = async (req: Request, res: Response) => {
   try {
     const group = await Group.findById(req.params.id).populate('members', 'name email');
+
     if (!group) {
       return res.status(404).json({ message: 'Group not found' });
     }
-    res.json(group);
+
+    const expenses = await Expense.find({ group: group.id })
+      .populate('paidBy', 'id, name')
+      .populate('splitBetween', 'id, name')
+      .sort({ createdAt: -1 })
+
+    const groupResult = await GroupSettlementResult.findOne({ group: group._id });
+
+    res.status(200).json({ group: group, expenses: expenses, groupResult: groupResult ? groupResult.result : null });
   } catch (error) {
     res.status(500).json({ message: error });
   }

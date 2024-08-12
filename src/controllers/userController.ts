@@ -1,11 +1,14 @@
 import { Request, Response } from "express";
-import { User } from "../models/User";
+import User from "../models/User";
+import { generateToken } from "../utils/jwt";
+import { AuthRequest } from "../middlewares/auth";
 
 // @route     POST /api/users/register
 // @desc      Register a user
 // @access    PUBLIC
 export const register = async (req: Request, res: Response) => {
   try {
+    console.log("REGISTER API HIT", req.body);
     const { name, email, password } = req.body;
     const user = await User.findOne({ email: email });
 
@@ -14,7 +17,10 @@ export const register = async (req: Request, res: Response) => {
     }
 
     const newUser = await User.create({ name, email, password });
-    res.status(201).json({ user: newUser });
+
+    // Generate a JWT token for the user
+    const token = generateToken(newUser.id);
+    res.status(201).json({ jwtToken: token, user: newUser, message: 'User Registered successfully' });
 
   } catch (error) {
     console.log("Error registering user", error);
@@ -40,10 +46,25 @@ export const login = async (req: Request, res: Response) => {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    res.status(200).json({ user: user, message: 'Logged in successfully' });
+    const token = generateToken(user.id);
+    res.status(200).json({ jwtToken: token, user: user, message: 'Logged in successfully' });
 
   } catch (error) {
     console.log("Error logging in user", error);
+    res.status(500).json({ error: 'Login failed' });
+  }
+}
+
+// @route     GET /api/users/allUsers
+// @desc      Fetch users
+// @access    PRIVATE
+export const allUsers = async (req: AuthRequest, res: Response) => {
+  try {
+    const users = await User.find({ _id: { $ne: req.user.id } }).select('id, name');
+    res.status(200).json({ users: users, message: 'All Users' });
+
+  } catch (error) {
+    console.log("Error fetching details", error);
     res.status(500).json({ error: 'Login failed' });
   }
 }
