@@ -3,6 +3,7 @@ import { Group } from "../models/Group";
 import User from "../models/User";
 import { AuthRequest } from "../middlewares/auth";
 import { Expense } from "../models/Expense";
+import { GroupSettlementResult } from "../models/GroupSettlementResult";
 
 // @route     POST /api/groups/create
 // @desc      Create a new group
@@ -49,7 +50,9 @@ export const groupDetails = async (req: Request, res: Response) => {
       .populate('splitBetween', 'id, name')
       .sort({ createdAt: -1 })
 
-    res.status(200).json({ group: group, expenses: expenses });
+    const groupResult = await GroupSettlementResult.findOne({ group: group._id });
+
+    res.status(200).json({ group: group, expenses: expenses, groupResult: groupResult ? groupResult.result : null });
   } catch (error) {
     res.status(500).json({ message: error });
   }

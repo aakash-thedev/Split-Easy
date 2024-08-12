@@ -89,8 +89,8 @@ export const settleExpenses = async (req: Request, res: Response) => {
     const prompt = `Here are the group expenses: ${expenseSummary}. Suggest the optimal way to settle these expenses.
     Only give the split explanation like who has give give whom how much ?
     Also return the response as a html code so that i could just render it on frontend without worrying about styles,
-    ignore tags like html head etc just divs and make sure to use bold colors for user names and grey colors for amount owes and remaining text.
-    After that break a line and under a heading proper explanation with a classname full-explanation give the proper explanation for above result`;
+    ignore tags like html head etc just divs and make sure to use bold colors for user names and grey colors remaining text.
+    Make sure to keep the user name with color rgb(95, 177, 248) and each line should be spaced with 4px gap, keep the color of amount red`;
 
     const settlementSuggestion = await geminiTextPrompt(prompt);
     await GroupSettlementResult.create({ group: groupId, result: settlementSuggestion });
